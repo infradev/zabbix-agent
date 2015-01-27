@@ -1,0 +1,5 @@
+---
+# handlers file for zabbix-precompiled-agent
+
+- name: "{{ zabbix_agent }} restarted"
+  service: name={{ zabbix_agent }} state=restarted

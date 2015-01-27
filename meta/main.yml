@@ -1,0 +1,25 @@
+---
+galaxy_info:
+  author: Alexandre Ribeiro de Souza
+  description: Installing and maintaining Zabbix Pre-Compiled Agent for RedHat/Debian/Ubuntu.
+  company: www.infradev.com.br
+  license: license (BSD)
+  min_ansible_version: 1.2
+  platforms:
+  - name: EL
+    versions:
+    - 5
+    - 6
+    - 7
+  - name: Ubuntu
+    versions:
+    - lucid
+    - precise
+    - trusty
+  - name: Debian
+    versions:
+    - squeeze
+    - wheezy
+  categories:
+  - monitoring
+dependencies: []

@@ -1,0 +1,75 @@
+---
+# Tasks specific for Debian systems
+
+- name: Debian | Set some facts
+  set_fact:
+      zabbix_agent: zabbix-agent
+
+- name: Debian | Set so_type=debian defacts
+  set_fact:
+      os_type: debian
+  when: ansible_distribution == "Debian"
+
+- name: Debian | Set so_type=ubuntu facts
+  set_fact:
+      os_type: ubuntu
+  when: ansible_distribution == "Ubuntu"
+
+- name: Debian | Set so_arch=i386 facts
+  set_fact:
+      os_arch: i386
+  when: ansible_architecture != "x86_64"
+
+- name: Debian | Set so_arch=amd64 facts
+  set_fact:
+      os_arch: amd64
+  when: ansible_architecture == "x86_64"
+
+- name: Debian | Create Local Zabbix deb tmp Directory
+  local_action: file path=/tmp/zabbix mode=755 state=directory
+  sudo: no
+
+- name: Debian | Verify if exist /tmp/zabbix/zabbix-agent...
+  local_action: stat path=/tmp/zabbix/zabbix-agent_{{ zabbix_package_version }}+{{ ansible_distribution_release }}_{{ os_arch }}.deb
+  sudo: no
+  register: zabbixagent_stat_result
+
+- name: Debian | Download Local Zabbix deb Debian
+  local_action: get_url url=http://repo.zabbix.com/zabbix/{{ zabbix_version }}/{{ os_type }}/pool/main/z/zabbix/{{ item }}_{{ zabbix_package_version }}+{{ ansible_distribution_release }}_{{ os_arch }}.deb dest=/tmp/zabbix mode=0644
+  sudo: no
+  with_items:
+  - zabbix-agent
+  - zabbix-get
+  - zabbix-sender
+  when: zabbixagent_stat_result.stat.exists == False
+
+- name: Debian | Create Zabbix deb tmp Directory
+  file: path=/tmp/zabbix mode=755 state=directory owner=root group=root
+
+- name: Debian | Copy Zabbix deb
+  copy: src=/tmp/zabbix/{{ item }}_{{ zabbix_package_version }}+{{ ansible_distribution_release }}_{{ os_arch }}.deb dest=/tmp/zabbix owner=root group=root
+  with_items:
+  - zabbix-agent
+  - zabbix-get
+  - zabbix-sender
+
+- name: Debian | Verify if exist /etc/zabbix/zabbix_agentd.conf
+  stat: path=/etc/zabbix/zabbix_agentd.conf
+  register: stat_result
+
+- name: Debian | Extract legacy UserParameter inline Zabbix Agent config file
+  shell: test $(grep -c "^UserParameter=" /etc/zabbix/zabbix_agentd.conf) -eq 0 || grep "^UserParameter=" /etc/zabbix/zabbix_agentd.conf >> /etc/zabbix/zabbix_agentd.d/userparameter_others.conf
+  when: stat_result.stat.exists
+
+- name: Debian | Installing gdebi-core
+  apt: pkg=gdebi-core state=present update_cache=yes cache_valid_time=3600
+
+- name: Debian | Installing zabbix-agent
+  shell: gdebi -n -q {{ item }}
+  with_items:
+  - /tmp/zabbix/zabbix-agent_{{ zabbix_package_version }}+{{ ansible_distribution_release }}_{{ os_arch }}.deb
+  - /tmp/zabbix/zabbix-get_{{ zabbix_package_version }}+{{ ansible_distribution_release }}_{{ os_arch }}.deb
+  - /tmp/zabbix/zabbix-sender_{{ zabbix_package_version }}+{{ ansible_distribution_release }}_{{ os_arch }}.deb
+
+- name: Debian | Enable the service
+  service: name={{ zabbix_agent }} enabled=yes

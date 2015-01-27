@@ -1,0 +1,68 @@
+---
+# Tasks specific for RedHat systems
+
+- name: RedHat | Set some facts
+  set_fact:
+      zabbix_agent: zabbix-agent
+
+- name: RedHat | Create Local Zabbix rpm tmp Directory
+  local_action: file path=/tmp/zabbix mode=755 state=directory
+  sudo: no
+
+- name: RedHat | Verify if exist /tmp/zabbix/zabbix-agent...
+  local_action: stat path=/tmp/zabbix/zabbix-agent-{{ zabbix_package_version }}.el{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm
+  sudo: no
+  register: zabbixagent_stat_result
+
+- name: RedHat | Download Local Zabbix rpm
+  local_action: get_url url=http://repo.zabbix.com/zabbix/{{ zabbix_version }}/rhel/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/{{ item }}-{{ zabbix_package_version }}.el{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm dest=/tmp/zabbix mode=0644
+  sudo: no
+  with_items:
+  - zabbix
+  - zabbix-agent
+  - zabbix-get
+  - zabbix-sender
+  when: zabbixagent_stat_result.stat.exists == False
+
+- name: RedHat | Download Local RPM-GPG-KEY-ZABBIX
+  local_action: get_url url=http://repo.zabbix.com/RPM-GPG-KEY-ZABBIX dest=/tmp/zabbix mode=0644
+  sudo: no
+
+- name: RedHat | Create Zabbix rpm tmp Directory
+  file: path=/tmp/zabbix mode=755 state=directory owner=root group=root
+
+- name: RedHat | Copy Zabbix rpm
+  copy: src=/tmp/zabbix/{{ item }}-{{ zabbix_package_version }}.el{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm dest=/tmp/zabbix owner=root group=root
+  with_items:
+  - zabbix
+  - zabbix-agent
+  - zabbix-get
+  - zabbix-sender
+
+- name: RedHat | Copy Zabbix RPM-GPG-KEY-ZABBIX
+  copy: src=/tmp/zabbix/RPM-GPG-KEY-ZABBIX dest=/tmp/zabbix owner=root group=root
+
+- name: RedHat | Register Zabbix RPM-GPG-KEY-ZABBIX
+  shell: rpm --import /tmp/zabbix/RPM-GPG-KEY-ZABBIX
+
+- name: RedHat | Verify if exist /etc/zabbix/zabbix_agentd.conf
+  stat: path=/etc/zabbix/zabbix_agentd.conf
+  register: stat_result
+
+- name: RedHat | Extract legacy UserParameter inline Zabbix Agent config file
+  shell: test $(grep -c "^UserParameter=" /etc/zabbix/zabbix_agentd.conf) -eq 0 || grep "^UserParameter=" /etc/zabbix/zabbix_agentd.conf >> /etc/zabbix/zabbix_agentd.d/userparameter_others.conf
+  when: stat_result.stat.exists
+
+- name: RedHat | Install Zabbix Agent rpm from local files
+  yum: name={{ item }}
+  with_items:
+  - /tmp/zabbix/zabbix-{{ zabbix_package_version }}.el{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm
+  - /tmp/zabbix/zabbix-agent-{{ zabbix_package_version }}.el{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm
+  - /tmp/zabbix/zabbix-get-{{ zabbix_package_version }}.el{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm
+  - /tmp/zabbix/zabbix-sender-{{ zabbix_package_version }}.el{{ ansible_distribution_major_version }}.{{ ansible_architecture }}.rpm
+
+- name: RedHat | Remove Zabbix RPM tmp Directory
+  file: path=/tmp/zabbix state=absent
+
+- name: RedHat | Enable the service
+  service: name={{ zabbix_agent }} enabled=yes
