@@ -1,5 +1,5 @@
 ---
-# tasks file for infradev.zabbix-precompiled-agent
+# tasks file for infradev.zabbix-agent
 
 - name: Install the correct repository
   include: "RedHat.yml"

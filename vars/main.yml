@@ -1,5 +1,5 @@
 ---
-# vars file for zabbix-precompiled-agent
+# vars file for zabbix-agent
 
 agent_pidfile: /var/run/zabbix/zabbix_agentd.pid
 agent_logfile: /var/log/zabbix/zabbix_agentd.log

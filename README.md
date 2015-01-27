@@ -1,7 +1,8 @@
 infradev.zabbix-agent
 =========
 
-This is a role for installing and maintaining the Zabbix Pre-Compiled Agent, based on the dj-wasabi.zabbix-agent role.
+This is a role for installing and maintaining the Zabbix Agent, when your servers can't access Zabbix repository.
+This role is based on the dj-wasabi.zabbix-agent role.
 
 Requirements
 ------------
